@@ -1,0 +1,27 @@
+--- a/src/runtime_service.rs
++++ b/src/runtime_service.rs
+@@ -3442,11 +3442,11 @@
+         };
+ 
+         let proof_access_duration_before = platform.now();
+-        let trie_root = if let Some(child_trie) = child_trie {
++        let trie_root = if let Some(child_trie) = child_trie.as_ref() {
+             // TODO: allocation here, but probably not problematic
+             let key = smoldot::trie::default_child_trie_root_key(child_trie.as_ref());
+             match call_proof.storage_value(block_state_trie_root_hash, &key) {
+                 Err(_) => {
+                     return (
+                         timing,
+                         Err(SingleRuntimeCallAttemptError::Inaccessible(
+@@ -3479,6 +3479,11 @@
+                     Ok(None)
+                 };
+                 let Ok(storage_value) = storage_value else {
++                    {
++                        let key = get.key().as_ref().to_vec();
++                        let info = trie_root.map(|r| call_proof.trie_node_info(r, smoldot::trie::bytes_to_nibbles(key.iter().copied())).map(|i| format!("{:?}", i.storage_value)));
++                        eprintln!("MISSING-PROOF-ENTRY op=StorageGet child_trie={:?} key=0x{} node_info={:?}", child_trie.as_ref().map(hex::encode), hex::encode(&key), info);
++                    }
+                     return (
+                         timing,
+                         Err(SingleRuntimeCallAttemptError::Inaccessible(
